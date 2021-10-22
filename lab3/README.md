@@ -10,6 +10,9 @@ What Java concept is the equivalent to type variables? What about C++?
 
 Can we constrain type variables in Java or C++? If yes how?
 
+We can surely do that by means of polymorphism. We just have to implement in different ways an interfaces 
+in different classes.
+
 ###
 
 ## Question 3.2.1
@@ -17,7 +20,11 @@ Can we constrain type variables in Java or C++? If yes how?
 How is equality handled for float types? Try to evaluate in the REPL: (0/0) and then
 (0/0) == (0/0) . Does this cause a problem for reference equality?
 
-###
+### (0/0) returns NaN and (0/0) == (0/0) returns false because Elm uses structural equality.
+### I searched in Elm core documentation and found out that elm uses IEEE 754 standard for float computations.
+### Then I researched on IEEE 754 wiki page and found out how Nan works and why (0/0) == (0/0) returns false.
+### It turns out that NaN retains some debug information which is unique for each NaN in it's bits so two 
+### different NaN values compared will return that they are not equal.
 
 ## Question 3.3.1
 
