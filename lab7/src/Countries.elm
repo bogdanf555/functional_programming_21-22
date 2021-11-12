@@ -3,7 +3,7 @@ module Countries exposing (..)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (style)
+import Html.Attributes exposing (checked, placeholder, style, type_, value, disabled)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as Dec
@@ -36,7 +36,7 @@ decodeCountry =
 type Model
     = Initial
     | RequestSent
-    | Success (List Country)
+    | Success ({countries: List Country, sorting: String}) 
     | Error Http.Error
 
 init : () -> ( Model, Cmd Msg )
@@ -49,12 +49,20 @@ init _ =
 type Msg
     = GetCountries
     | GotCountries (Result Http.Error (List Country))
+    | ChangeSorting Bool
 
 getCountries : Cmd Msg
 getCountries = Http.get 
     { url = "https://restcountries.com/v3.1/all"
     , expect = Http.expectJson GotCountries (Dec.list decodeCountry) 
     }
+
+changeSorting : String -> String
+changeSorting sorting = 
+    if sorting == "ascending" then
+        "descending"
+    else 
+        "ascending"
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -65,7 +73,7 @@ update msg model =
             )
 
         GotCountries (Ok countries) ->
-            ( Success countries
+            ( Success {countries=countries, sorting="descending"}
             , Cmd.none
             )
 
@@ -73,12 +81,20 @@ update msg model =
             ( Error err
             , Cmd.none
             )
-
+        ChangeSorting value ->
+            case model of
+              Success {countries, sorting} -> 
+                ( Success {countries=countries, sorting=(changeSorting sorting)}
+                , Cmd.none
+                )
+              _ ->
+                ( model
+                , Cmd.none
+                )
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
-
 
 
 view : Model -> Html Msg
@@ -90,8 +106,14 @@ view model =
         RequestSent ->
             div [] [ text "Loading..." ]
 
-        Success countries ->
-            viewSuccess countries
+        Success {countries, sorting} ->
+            div [] [
+                div [] 
+                [   input [ type_ "checkbox", onCheck ChangeSorting] []
+                    , text "Sort Ascending?"
+                ]
+                , viewSuccess countries sorting
+            ]
 
         Error err ->
             viewError err
@@ -112,23 +134,22 @@ viewCountry {name, area, population, region} =
         ]
 
 
-countryComparisonDescending a b =
-    case compare a.area b.area of
-      LT -> GT
-      EQ -> EQ
-      GT -> LT
+countryComparison sorting a b =
+    if sorting == "descending" then
+        case compare a.area b.area of
+        LT -> GT
+        EQ -> EQ
+        GT -> LT
+    else
+        case compare a.area b.area of
+        LT -> LT
+        EQ -> EQ
+        GT -> GT
 
-viewSuccess : List Country -> Html msg
-viewSuccess countries =
-    let
-        compareFunction = countryComparisonDescending
-    in
-    div [] ((h2 [] [ text "ok" ]
-    , div []
-        [ input [ type_ "checkbox", onCheck (), checked yes ] []
-        , text "Activate account?"
-        ] 
-    )::List.map viewCountry (List.sortWith compareFunction countries))
+viewSuccess : List Country -> String -> Html msg
+viewSuccess countries sorting =
+    div [] ((h2 [] [ text "ok" ])::List.map viewCountry (List.sortWith (countryComparison sorting) countries))
+
 
 httpErrorToString : Http.Error -> String
 httpErrorToString err =
