@@ -44,9 +44,17 @@ tails l =
 
 Implement the combinations function such that the tests pass.
 
-**Response:** Not yet implemented
-
+**Response:**
 ```elm
+combinations : List a -> List (List a)
+combinations l = 
+    case l of
+        [] -> [[]]
+        x::xs -> 
+            let
+                tailList = combinations xs
+            in
+            (List.append (List.map (\a -> List.append ([x]) a) tailList) tailList)
 ```
 
 ## Exercise 7.6.3
@@ -78,4 +86,15 @@ Add a checkbox which allows the user to change the current sort order of countri
 ascending (i.e. if the checkbox is is unchecked the sort order will be descending, if it
 checked the sort order will be ascending).
 
-**Response:** 
+**Response:** Added another field in the Success model called sorting which retains if it is ascending
+or decending and changes it in an event called ChangeSorting.
+
+
+## Exercise 7.6.6
+
+Add a dropdown list (select element) to select the field for the sorting. The options
+should be: population, area, population density
+
+**Response:** Added another field in the Success model which keeps track of the field which has
+to be compared in order to sort the countries and changed the comparing function to support the 
+variable of the "compare by" field.

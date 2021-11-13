@@ -22,5 +22,12 @@ Combinations are **not** returned in lexicographic order.
 
 -}
 combinations : List a -> List (List a)
-combinations l = Debug.todo "Implement combinations"
+combinations l = 
+    case l of
+        [] -> [[]]
+        x::xs -> 
+            let
+                tailList = combinations xs
+            in
+            (List.append (List.map (\a -> List.append ([x]) a) tailList) tailList)
 

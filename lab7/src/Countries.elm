@@ -36,7 +36,7 @@ decodeCountry =
 type Model
     = Initial
     | RequestSent
-    | Success ({countries: List Country, sorting: String}) 
+    | Success ({countries: List Country, sorting: String, field: String}) 
     | Error Http.Error
 
 init : () -> ( Model, Cmd Msg )
@@ -50,6 +50,7 @@ type Msg
     = GetCountries
     | GotCountries (Result Http.Error (List Country))
     | ChangeSorting Bool
+    | SelectedValue String
 
 getCountries : Cmd Msg
 getCountries = Http.get 
@@ -73,7 +74,7 @@ update msg model =
             )
 
         GotCountries (Ok countries) ->
-            ( Success {countries=countries, sorting="descending"}
+            ( Success {countries=countries, sorting="descending", field="population"}
             , Cmd.none
             )
 
@@ -83,14 +84,24 @@ update msg model =
             )
         ChangeSorting value ->
             case model of
-              Success {countries, sorting} -> 
-                ( Success {countries=countries, sorting=(changeSorting sorting)}
+              Success {countries, sorting, field} -> 
+                ( Success {countries=countries, sorting=(changeSorting sorting), field=field}
                 , Cmd.none
                 )
               _ ->
                 ( model
                 , Cmd.none
                 )
+        SelectedValue selectedField ->
+            case model of
+                Success {countries, sorting, field} -> 
+                    ( Success {countries=countries, sorting=(changeSorting sorting), field=selectedField}
+                    , Cmd.none
+                    )
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -106,13 +117,21 @@ view model =
         RequestSent ->
             div [] [ text "Loading..." ]
 
-        Success {countries, sorting} ->
-            div [] [
+        Success {countries, sorting, field} ->
+            div [] 
+            [
                 div [] 
                 [   input [ type_ "checkbox", onCheck ChangeSorting] []
                     , text "Sort Ascending?"
                 ]
-                , viewSuccess countries sorting
+                , div []
+                [ select [ Html.Events.onInput SelectedValue ]
+                    [ option [ value "population" ] [ text "population" ]
+                    , option [ value "area" ] [ text  "area" ]
+                    , option [ value "population_density" ] [text "population density" ]
+                    ]
+                ]
+                , viewSuccess countries sorting field
             ]
 
         Error err ->
@@ -129,26 +148,38 @@ viewCountry {name, area, population, region} =
     div [style "border" "solid 1px", style "margin" "2px"] 
         [ p [] [text <| "Name:" ++ name]
         , p [] [text <| "Area: " ++ String.fromFloat area]
+        , p [] [text <| "Region: " ++ region ]
         , p [] [text <| "Population: " ++ String.fromInt population]
         , p [] [text <| "Population density: " ++ String.fromFloat (toFloat population / area)]
         ]
 
 
-countryComparison sorting a b =
-    if sorting == "descending" then
-        case compare a.area b.area of
-        LT -> GT
-        EQ -> EQ
-        GT -> LT
-    else
-        case compare a.area b.area of
-        LT -> LT
-        EQ -> EQ
-        GT -> GT
+retrieveField: String -> Country -> Float
+retrieveField field country =
+    case field of
+       "area" -> country.area
+       "population_density" -> (toFloat country.population / country.area)
+       _ -> toFloat country.population
 
-viewSuccess : List Country -> String -> Html msg
-viewSuccess countries sorting =
-    div [] ((h2 [] [ text "ok" ])::List.map viewCountry (List.sortWith (countryComparison sorting) countries))
+countryComparison sorting field a b =
+    let 
+        field1 = retrieveField field a
+        field2 = retrieveField field b
+    in
+    if sorting == "descending" then
+        case compare field1 field2 of
+            LT -> GT
+            EQ -> EQ
+            GT -> LT
+    else
+        case compare field1 field2 of
+            LT -> LT
+            EQ -> EQ
+            GT -> GT
+
+viewSuccess : List Country -> String -> String -> Html msg
+viewSuccess countries sorting field =
+    div [] ((h2 [] [ text "ok" ])::List.map viewCountry (List.sortWith (countryComparison sorting field) countries))
 
 
 httpErrorToString : Http.Error -> String
