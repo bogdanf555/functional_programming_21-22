@@ -51,6 +51,9 @@ The month fields are handled as follows:
     monthsBetween (full 2020 Jan) (onlyYear 2021) --> Nothing
 
     monthsBetween (full 2020 Dec) (full 2021 Jan) --> Just 1
+
+    monthsBetween (onlyYear 2020) (onlyYear 2021) --> Just 12
+    monthsBetween (onlyYear 2020) (onlyYear 2022) --> Just 24
 ```
 
 -}
@@ -61,7 +64,7 @@ monthsBetween dA dB =
         (start, end) = sortDatesStartEnd dA dB
     in
         case (month dA, month dB) of
-            (Nothing, Nothing) -> Just <| Basics.abs <| (year dA - year dB)
+            (Nothing, Nothing) -> Just <| ( Basics.abs <| (year dA - year dB) * 12)
             (Just _, Nothing) -> Nothing
             (Nothing, Just _) -> Nothing
             (Just _, Just _) -> Just <| 12 * ((year end - year start)) + 
