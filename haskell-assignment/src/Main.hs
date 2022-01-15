@@ -8,6 +8,7 @@ import Args
     parseArgs,
   )
 import qualified Data.List as L
+import Data.Maybe
 import qualified Entry.DB as DB
 import Entry.Entry
   ( Entry (..),
@@ -45,20 +46,39 @@ handleInit =
 handleGet :: TestableMonadIO m => GetOptions -> m ()
 handleGet getOpts =
   do
-    print $ getOptId getOpts
     database_load <- DB.load
     case database_load of
-      Success s -> print $ DB.findFirst (\x -> entryId x == getOptId getOpts) s
-      Error s -> print s
-    return ()
+      Success snippet_list -> putStrLn $ entrySnippet (fromJust (DB.findFirst (\x -> entryId x == getOptId getOpts) snippet_list))
+      Error err -> putStrLn "Failed to load DB"
 
 -- | Handle the search command
 handleSearch :: TestableMonadIO m => SearchOptions -> m ()
-handleSearch searchOpts = return ()
+handleSearch (SearchOptions query_list) =
+  do
+    database_load <- DB.load
+    case database_load of
+      Success snippets ->
+        do
+          let entries = DB.findAll (matchedByAllQueries query_list) snippets
+          if length entries == 0
+            then putStrLn "No entries found"
+            else putStrLn (head (map (\x -> (head . lines) (show (FmtEntry x))) entries))
+      Error err -> putStrLn "Failed to load DB"
+    return ()
 
 -- | Handle the add command
 handleAdd :: TestableMonadIO m => AddOptions -> m ()
-handleAdd addOpts =
+handleAdd addOpts = do
+  snip <- readFile (addOptFilename addOpts)
+  db <- DB.load
+
+  case db of
+    Error _ -> putStrLn "Failed to load DB"
+    _ -> putStrLn ""
+  let db' = getSuccess db DB.empty
+      db'' = DB.insertWith (\id -> makeEntry id snip addOpts) db'
+
+  DB.save db''
   return ()
   where
     makeEntry :: Int -> String -> AddOptions -> Entry

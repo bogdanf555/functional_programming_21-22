@@ -32,24 +32,14 @@ value =
 -- >>> P.runParser int "i10e"
 -- Success (10, "")
 int :: Parser Int
-int = P.fail "TODO (int)"
-
--- int "" = Error "empty string - int parser"
--- int (first : rest) =
---   let last_ch = (head . reverse) rest
---       num_chs = (reverse . tail . reverse) rest
---    in if first == 'i' && last_ch == 'e'
---         then case readMaybe num_chs :: Maybe Int of
---           Nothing -> Error "not a valid number - int parser"
---           Just x -> Success (x, "")
---         else Error "not valid format - int parser"
+int = P.pMap fst (P.pThen (P.char 'i') (P.andThen P.number (P.char 'e')))
 
 -- | Parse a bencode string
 --
 -- >>> P.runParser string "3:abc"
 -- Success ("abc", "")
 string :: Parser String
-string = P.fail "TODO (string)"
+string = P.with P.number (\x -> P.pThen (P.char ':') (P.take x))
 
 -- | Parse a bencode list
 --
@@ -59,14 +49,14 @@ string = P.fail "TODO (string)"
 -- >>> P.runParser list "l1:a1:be"
 -- Success ([BencodeString "a",BencodeString "b"], "")
 list :: Parser [BencodeValue]
-list = P.fail "TODO (list)"
+list = P.pThen (P.char 'l') (P.pMap fst (P.andThen (P.many value) (P.char 'e')))
 
 -- | Parse a bencode dict
 --
 -- >>> P.runParser dict "d1:ai1e1:bi2ee"
 -- Success ([(BencodeString "a", BencodeInt 1),(BencodeString "b",BencodeInt 2)], "")
 dict :: Parser [BencodeKW]
-dict = P.fail "TODO (dict)"
+dict = P.pThen (P.char 'd') (P.pMap (\(x, y) -> x) (P.andThen (P.many (P.andThen string value)) (P.char 'e')))
 
 -- | Convenience wrapper for `value`
 --
